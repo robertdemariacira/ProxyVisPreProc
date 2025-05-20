@@ -1,32 +1,32 @@
 """
-    This is the main module to esimate both daytime Vis and nighttime ProxyVis
-    parts of the GeoProxyVis imagery. Your code shoud call the
-    get_all_vis_pvis function.
+This is the main module to esimate both daytime Vis and nighttime ProxyVis
+parts of the GeoProxyVis imagery. Your code shoud call the
+get_all_vis_pvis function.
 
-    ##########################################################################
-    This code is part of the ProxyVis processing written by:
-    Galina.Chirokova@colostate.edu; Robert.DeMaria@colostate.edu,
-    Alan Brammer
+##########################################################################
+This code is part of the ProxyVis processing written by:
+Galina.Chirokova@colostate.edu; Robert.DeMaria@colostate.edu,
+Alan Brammer
 
-    Copyright (C) 2024  Galina Chirokova, Robert DeMaria, Alan Brammer
+Copyright (C) 2024  Galina Chirokova, Robert DeMaria, Alan Brammer
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as published
-    by the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
 
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-    ##########################################################################
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+##########################################################################
 """
 
 import datetime as dt
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 
@@ -48,6 +48,13 @@ Dictionary of data read from a file.  The keys should be channel names and the
 values should be a sub-dictionary of calibrated data.  The keys for the 
 sub-dictionary should be the type of calibration: one of "bt_temp", "radiances".
 """
+
+# DataDict key used to store brightness temperature channels
+BT_TEMP_KEY = "bt_temp"
+
+# DataDict key used to store radiance channels
+RADIANCES_KEY = "radiances"
+
 
 # Available ProxyVis functions
 PVIS_FUNC_LOOKUP = {
@@ -225,7 +232,7 @@ def apply_dn_mask(
         time_info_dt (dt.datetime): Time of the MIDDLE of the scan. This is NOT
             the GEO satellite data timestamp. The GEO timestamp is at the start
             of the scan. This is the time of the middle of the scan to calculate SZA most
-            relevant for the full disk. For example, for GOES-16/18, and Himawari8/9 
+            relevant for the full disk. For example, for GOES-16/18, and Himawari8/9
             10-min full disk scan this is teh timestamp in the filename +5 minutes.
         rlats (np.ndarray): Array of lats matching resolution for pvis and vis_disp
         rlons (np.ndarray): Array of lons matching resolution for pvis and vis_disp
@@ -274,7 +281,7 @@ def calculate_pvis(
             "himawari8", "himawari9", "meteosat-9", "meteosat-11")
         data (DataDict): Dictionary of IR and Vis data.
         data_to_args (Dict[str, str]): Dict mapping DataDict entries
-            to pvis function args. Example: {'B07': 'c07', 'B11': 'c11'} 
+            to pvis function args. Example: {'B07': 'c07', 'B11': 'c11'}
         proxy_vis_alg_name (str): User requested ProxyVis function name:
             ("nighttime_pvis_main_two_eq", "nighttime_pvis_main_one_eq",
             "nighttime_pvis_simple_two_eq", "nighttime_pvis_simple_one_eq")
@@ -296,7 +303,7 @@ def calculate_pvis(
     """
     apv = PVIS_FUNC_LOOKUP[proxy_vis_alg_name]
 
-    channel_args = _create_channel_call_args(data, data_to_args, "bt_temp")
+    channel_args = _create_channel_call_args(data, data_to_args, BT_TEMP_KEY)
 
     # estimate ProxyVis
     pvis_2km, _pvis_regr, pvismin, pvismax = apv(
@@ -330,7 +337,7 @@ def calculate_vis(
         time_info_dt (dt.datetime): Time of the MIDDLE of the scan. This is NOT
             the GEO satellite data timestamp. The GEO timestamp is at the start
             of the scan. This is the time of the middle of the scan to calculate SZA most
-            relevant for the full disk. For example, for GOES-16/18, and Himawari8/9 
+            relevant for the full disk. For example, for GOES-16/18, and Himawari8/9
             10-min full disk scan this is teh timestamp in the filename +5 minutes.
 
     Returns:
@@ -340,7 +347,7 @@ def calculate_vis(
     """
     apv = VIS_FUNC_LOOKUP[dvis_alg_name]
 
-    channel_args = _create_channel_call_args(data, dvis_data_to_args, "radiances")
+    channel_args = _create_channel_call_args(data, dvis_data_to_args, RADIANCES_KEY)
 
     # Generate adjusted Vis data
     vis_05km, vismin, vismax = apv(
@@ -375,7 +382,7 @@ def _create_channel_call_args(
         data (DataDict): Dictionary containing input GEO channel data.
         data_to_args (Dict[str, str]): Dictionary mapping contents of data
             dictionary to ProxyVis or Vis functions arguments.
-        data_type: a string, 'bt_temp' for ProxyVis or 'readiances' for Vis
+        data_type: a string, 'bt_temp' for ProxyVis or 'radiances' for Vis
 
     Returns:
         args (Dict[str, np.ndarray]): Dictionary of data to be used as the
